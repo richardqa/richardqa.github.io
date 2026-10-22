@@ -1,0 +1,46 @@
+
+# Herramientas y tecnologías documentadas en NubeSegura.
+# No implica que sean proyectos desarrollados por el autor.
+
+- nombre: "Kubernetes"
+  lenguaje: "YAML"
+  color: "94 180 248"
+  icono: "fas fa-cubes"
+  repo: "https://github.com/kubernetes/kubernetes"
+  resumen: >-
+    Plataforma de orquestación de contenedores. En NubeSegura se documentan
+    conceptos de administración de clústeres, despliegue de aplicaciones,
+    networking, seguridad y operación de workloads.
+  tags: [kubernetes, cloud-native, contenedores]
+
+- nombre: "KubeVirt"
+  lenguaje: "Go"
+  color: "130 140 255"
+  icono: "fas fa-server"
+  repo: "https://github.com/kubevirt/kubevirt"
+  resumen: >-
+    Tecnología para ejecutar y gestionar máquinas virtuales sobre Kubernetes.
+    Permite explorar arquitecturas de virtualización cloud-native, migración
+    de cargas de trabajo y operación de máquinas virtuales.
+  tags: [kubevirt, virtualización, kubernetes]
+
+- nombre: "Trivy"
+  lenguaje: "CLI"
+  color: "46 230 214"
+  icono: "fas fa-shield-halved"
+  repo: "https://github.com/aquasecurity/trivy"
+  resumen: >-
+    Escáner de seguridad para identificar vulnerabilidades y otros riesgos
+    en imágenes de contenedores, repositorios y artefactos compatibles.
+  tags: [seguridad, contenedores, análisis de vulnerabilidades]
+
+- nombre: "Autopsy"
+  lenguaje: "Digital Forensics"
+  color: "255 120 60"
+  icono: "fas fa-magnifying-glass"
+  repo: "https://github.com/sleuthkit/autopsy"
+  resumen: >-
+    Plataforma de análisis forense digital para examinar evidencias,
+    sistemas de archivos y artefactos relevantes en investigaciones.
+  tags: [forense digital, análisis, ciberseguridad]
+

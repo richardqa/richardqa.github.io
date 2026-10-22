@@ -1,0 +1,329 @@
+(function () {
+  'use strict';
+
+  // Modo grabacion (?rec=1): sin barra de controles ni avisos, solo la
+  // imagen. El recorrido no corre solo: lo mueve un grabador externo
+  // fotograma a fotograma con window.ANIM.seek() (ver grabar.py).
+  var REC = /[?&]rec=1(&|$)/.test(location.search);
+  if (REC) document.body.classList.add('rec');
+
+  // ============================================================
+  //  GUION (recorrido determinista = función del tiempo)
+  //
+  //  Principio general: las transiciones SOLAPAN el movimiento.
+  //  Cada página ya se está moviendo cuando se quita el fundido de
+  //  entrada, y el fundido de salida empieza ANTES de que la página
+  //  termine su movimiento (sigue moviéndose tapada por el negro).
+  //
+  //  0) Fundido DE negro: aparece el Inicio y hace zoom-out (empieza
+  //     a la vez que el fundido). Antes de acabar el zoom ya funde a negro.
+  //  1) Write-ups: scroll hacia abajo por las máquinas (rápido).
+  //  2) Writeup de Mirai: arranca en Explotacion y baja al mismo
+  //     ritmo calmado que /writeups y el roadmap; corto, solo esa parte.
+  //  3) Roadmap: arranca en las easy y baja hasta que asoman las medium;
+  //     el fundido entra ahi, con la pagina aun bajando tapada por el negro.
+  //  4) Inicio otra vez (zoom-out) y a negro.
+  // ============================================================
+  var PAGES = ['/', '/writeups/', '/posts/mirai/', '/roadmap/'];
+  // páginas que se muestran SIN columnas laterales (solo el contenido)
+  var HIDE_CHROME = { 1: true, 2: true, 3: true };
+
+  var PLAN = [
+    { page: 0, kind: 'zoomout', dur: 4.2 },               // Inicio (zoom-out) → antes a Write-ups
+    { trans: 'fade', dur: 0.9 },
+    { page: 1, kind: 'scroll',  dur: 4.5, fadeAt: 0.594 }, // Write-ups (fadeAt sube con dur para NO frenar: 0.594/4.5 = 0.33/2.5)
+    { trans: 'fade', dur: 0.9 },
+    { page: 2, kind: 'scroll',  dur: 9, speedPx: 105, startAtId: 'explotacion' }, // Mirai (arranca en Explotación; ritmo calmado, no recorre todo)
+    { trans: 'fade', dur: 0.9 },
+    { page: 3, kind: 'scroll',  dur: 11, speedPx: 135, startAtId: 'easy' }, // Roadmap (arranca en las easy; al acabar el tramo ya se ven las 6 primeras medium)
+    { trans: 'fade', dur: 0.9 },
+    { page: 0, kind: 'zoomout', dur: 5 }                  // Inicio otra vez → negro
+  ];
+  var INTRO = 1.2;   // fundido de entrada (de negro al Inicio)
+  var OUTRO = 1.8;   // fundido de salida final (a negro)
+  var HOME_ZOOM_SPAN = 6.5; // el zoom-out del Inicio avanza a ESTE ritmo (lento),
+                            // independiente de la duración del tramo → la transición
+                            // entra antes y el zoom-out NO llega a terminar.
+
+  // ====== iframes (altura completa → movimiento por transform, GPU) ======
+  var frames = document.getElementById('frames');
+  function measure(f) {
+    try {
+      var d = f.contentDocument; if (!d) return;
+      var h = Math.max(d.documentElement.scrollHeight, d.body ? d.body.scrollHeight : 0);
+      if (h > 120) { f._h = h; f.style.height = h + 'px'; }
+    } catch (e) {}
+  }
+  var iframes = PAGES.map(function (src, i) {
+    var f = document.createElement('iframe');
+    f.src = src;
+    f.setAttribute('tabindex', '-1');
+    f.setAttribute('aria-hidden', 'true');
+    if (i === 0) f.classList.add('is-active');
+    f.addEventListener('load', function () {
+      try {
+        var d = f.contentDocument;
+        var css = 'html{scroll-behavior:auto!important;overflow:hidden!important}::-webkit-scrollbar{width:0;height:0}';
+        if (HIDE_CHROME[i]) {
+          // Ocultar columnas laterales / barra superior → solo el contenido.
+          css += '#sidebar,#topbar-wrapper,#panel-wrapper,#back-to-top,#notification,#mask,#search-result-wrapper{display:none!important}'
+               + '#main-wrapper{margin-left:0!important;width:100%!important}'
+               + '#main-wrapper>.container{max-width:100%!important}'
+               + '#main-wrapper>.container>.row>main{flex:0 0 100%!important;max-width:100%!important}'
+               + 'body{background:#05070a!important}';
+        }
+        var st = d.createElement('style');
+        st.textContent = css;
+        d.head.appendChild(st);
+      } catch (e) {}
+      warmFrame(f, i);
+    });
+    frames.appendChild(f);
+    return f;
+  });
+
+  // ====== precarga (para que el recorrido vaya FLUIDO, sin tirones) ======
+  // El blog carga las imágenes en diferido (lazy) y decodifican al entrar en
+  // pantalla → tirones al hacer scroll. Forzamos su carga y decode ANTES de
+  // dejar reproducir; play no se habilita hasta que las 4 páginas estén listas.
+  var ready = PAGES.map(function () { return false; });
+  var gateReady = false;
+  function markReady(i) {
+    if (ready[i]) return;
+    ready[i] = true;
+    for (var k = 0; k < ready.length; k++) if (!ready[k]) return;
+    gateReady = true;
+    var pb = document.getElementById('play');
+    if (pb) pb.classList.remove('is-loading');
+    var h = document.getElementById('hint');
+    if (h && !playing && cur === 0) h.innerHTML = 'Pulsa <b>play</b> o <b>espacio</b> para empezar';
+  }
+  function warmFrame(f, i) {
+    var d; try { d = f.contentDocument; } catch (e) { d = null; }
+    measure(f);
+    function finish() { measure(f); render(cur); markReady(i); }
+    if (!d) { finish(); return; }
+    var imgs = [].slice.call(d.images || []);
+    imgs.forEach(function (img) {
+      try {
+        img.loading = 'eager';
+        if (img.dataset && img.dataset.src) img.src = img.dataset.src;
+        if (img.dataset && img.dataset.srcset) img.srcset = img.dataset.srcset;
+      } catch (e) {}
+    });
+    var proms = imgs.map(function (img) {
+      if (img.complete && img.naturalWidth) return Promise.resolve();
+      return new Promise(function (res) {
+        var done = false, to = setTimeout(fin, 4000);
+        function fin() { if (done) return; done = true; clearTimeout(to); res(); }
+        if (img.decode) img.decode().then(fin, fin); else fin();
+        img.addEventListener('load', fin, { once: true });
+        img.addEventListener('error', fin, { once: true });
+      });
+    });
+    (proms.length ? Promise.all(proms) : Promise.resolve()).then(finish, finish);
+    setTimeout(function () { measure(f); }, 600);
+  }
+
+  // ====== segmentos ======
+  var segs = [], TOTAL = 0;
+  (function build() {
+    var t = 0;
+    PLAN.forEach(function (it) {
+      if (it.trans) { segs.push({ type: 'trans', eff: it.trans, dur: it.dur, start: t, end: t + it.dur }); t += it.dur; }
+      else {
+        // OJO: hay que copiar TODOS los ajustes del tramo (speedPx, startAtId…);
+        // si alguno se queda fuera, applyPage cae al cálculo por defecto y el
+        // scroll se dispara.
+        segs.push({ type: 'page', page: it.page, kind: it.kind, fadeAt: it.fadeAt,
+                    speedPx: it.speedPx, startAtId: it.startAtId, startAtText: it.startAtText,
+                    start: t, end: t + it.dur });
+        t += it.dur;
+      }
+    });
+    TOTAL = t;
+    // exit = cuánto sigue moviéndose la página DESPUÉS de su fin (tapada por el
+    // negro): la duración de su transición de salida, o el OUTRO si es la última.
+    for (var j = 0; j < segs.length; j++) {
+      var s = segs[j]; if (s.type !== 'page') continue;
+      var post = segs[j + 1] && segs[j + 1].type === 'trans' ? segs[j + 1] : null;
+      s.exit = post ? post.dur : OUTRO;
+      // La página empieza a moverse al comienzo de su transición de ENTRADA
+      // (mientras aún está negro), no cuando se quita el fundido.
+      var pre = segs[j - 1] && segs[j - 1].type === 'trans' ? segs[j - 1] : null;
+      s.motionStart = s.start - (pre ? pre.dur : 0);
+    }
+    // enlaces de cada transición con la página saliente / entrante
+    for (var m = 0; m < segs.length; m++) {
+      if (segs[m].type !== 'trans') continue;
+      for (var a = m - 1; a >= 0; a--) if (segs[a].type === 'page') { segs[m].fromSeg = segs[a]; break; }
+      for (var b = m + 1; b < segs.length; b++) if (segs[b].type === 'page') { segs[m].toSeg = segs[b]; break; }
+    }
+  })();
+  // ====== easings ======
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function easeIO(k) { return k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; }
+  function easeOut(k) { return 1 - Math.pow(1 - k, 3); }
+
+  // Primer elemento "hoja" dentro de root cuyo texto contiene txt (para anclar
+  // el scroll a un párrafo sin id).
+  function findText(root, txt) {
+    var all = root.querySelectorAll('h1,h2,h3,h4,p,span,li');
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].textContent.indexOf(txt) >= 0 && !all[i].querySelector('*')) return all[i];
+    }
+    return null;
+  }
+
+  // ====== transform por página (en función del tiempo absoluto) ======
+  function applyPage(f, seg, t) {
+    var H = frames.clientHeight, ch = f._h || H;
+    var elapsed = Math.max(0, t - (seg.motionStart != null ? seg.motionStart : seg.start)); // arranca en el negro de entrada y sigue tras el fin
+    var dur = seg.end - seg.start;
+    var s = 1, ty = 0, ox = '50%', oy = '0%';
+    if (seg.kind === 'zoomout') {
+      // Zoom-out a ritmo fijo y lento (HOME_ZOOM_SPAN), independiente de la
+      // duración del tramo: la transición entra antes y el zoom NO termina.
+      // Pivota en la esquina de arriba a la izquierda, que es donde están la foto
+      // de perfil y el menú: con el pivote centrado se salían de cuadro (y el 35%
+      // era porcentaje de la ALTURA DEL IFRAME, la página entera, no del hueco
+      // visible, así que el pivote caía muy por debajo y los empujaba aún más).
+      ox = '0%'; oy = '0%';
+      var q = clamp(elapsed / HOME_ZOOM_SPAN, 0, 1);
+      s = 1.12 - 0.12 * easeOut(q);                // 1.12 → 1.0
+    } else { // scroll vertical a velocidad constante (ya se mueve al quitar el fundido)
+      oy = '0%';
+      var D = Math.max(0, ch - H);
+      var v;
+      if (seg.speedPx != null) {
+        // Velocidad fija en px/s: el tramo NO tiene que recorrer la página entera,
+        // así una página muy larga (un writeup) se lee al mismo ritmo que una corta.
+        v = seg.speedPx;
+      } else {
+        var fadeAt = seg.fadeAt || 0.7;            // fracción recorrida cuando empieza la salida
+        v = dur > 0 ? (fadeAt * D / dur) : 0;      // sigue a la misma velocidad durante el fundido
+      }
+      // Arranque del scroll en una sección concreta (p. ej. 'explotacion'), no arriba del todo.
+      var startOffset = 0;
+      if (seg.startAtId) {
+        if (!seg._startOff) {
+          try {
+            var sel = iframes[seg.page].contentDocument.getElementById(seg.startAtId);
+            // startAtText afina dentro de la sección (p. ej. una CVE concreta): los
+            // posts son generados y sus párrafos no llevan id, así que se busca por
+            // texto, y solo ahí dentro para no cazar una mención anterior.
+            if (sel && seg.startAtText) sel = findText(sel, seg.startAtText) || sel;
+            if (sel) { var so = sel.getBoundingClientRect().top - 24; if (so > 0) seg._startOff = so; }
+          } catch (e) {}
+        }
+        if (seg._startOff) startOffset = Math.min(seg._startOff, D);
+      }
+      ty = -Math.min(D, startOffset + v * elapsed);
+    }
+    f.style.transformOrigin = ox + ' ' + oy;
+    f.style.transform = 'translate(0px,' + ty.toFixed(1) + 'px) scale(' + s.toFixed(3) + ')';
+  }
+
+  var activeIdx = 0;
+  function setActive(i) {
+    if (i === activeIdx) return;
+    iframes[activeIdx].classList.remove('is-active');
+    iframes[i].classList.add('is-active');
+    activeIdx = i;
+  }
+
+  // ====== capa negra (canvas): intro, outro y transiciones ======
+  var canvas = document.getElementById('cy-canvas');
+  var ctx = canvas.getContext('2d');
+  var CW = 0, CH = 0;
+  function sizeCanvas() { var r = canvas.getBoundingClientRect(); CW = canvas.width = Math.max(1, Math.round(r.width)); CH = canvas.height = Math.max(1, Math.round(r.height)); }
+
+  function overlayAlpha(t, s, k) {
+    var a = 0;
+    if (s.type === 'trans') { var c = 1 - Math.abs(2 * k - 1); a = Math.min(1, c * c * (3 - 2 * c) * 1.12); } // fundido suave (curva eased, no lineal)
+    if (t < INTRO) a = Math.max(a, 1 - easeIO(t / INTRO));                    // fundido de entrada
+    if (t > TOTAL - OUTRO) a = Math.max(a, easeIO((t - (TOTAL - OUTRO)) / OUTRO)); // fundido final
+    return a;
+  }
+  function paintBlack(a) {
+    if (a <= 0.002) return;
+    ctx.globalAlpha = Math.min(1, a);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.globalAlpha = 1;
+  }
+
+  // ====== render ======
+  function render(t) {
+    t = clamp(t, 0, TOTAL);
+    var s = segAt(t), k = (t - s.start) / (s.end - s.start);
+    if (!CW) sizeCanvas();
+    ctx.clearRect(0, 0, CW, CH);
+    if (s.type === 'page') {
+      setActive(s.page);
+      applyPage(iframes[s.page], s, t);
+    } else { // transición: la saliente sigue su movimiento; a mitad se cambia a la entrante
+      if (k < 0.5) { setActive(s.fromSeg.page); applyPage(iframes[s.fromSeg.page], s.fromSeg, t); }
+      else { setActive(s.toSeg.page); applyPage(iframes[s.toSeg.page], s.toSeg, t); }
+    }
+    paintBlack(overlayAlpha(t, s, k));
+    updateBar(t);
+  }
+  function segAt(t) { for (var i = 0; i < segs.length; i++) if (t < segs[i].end) return segs[i]; return segs[segs.length - 1]; }
+
+  // ====== barra / tiempo ======
+  var tlFill = document.getElementById('tl-fill'), tlHead = document.getElementById('tl-head'), timeEl = document.getElementById('time');
+  function fmt(s) { s = Math.max(0, s); var m = Math.floor(s / 60), ss = Math.floor(s % 60); return m + ':' + (ss < 10 ? '0' : '') + ss; }
+  function updateBar(t) { var p = TOTAL ? (t / TOTAL) : 0; tlFill.style.width = (p * 100) + '%'; tlHead.style.left = (p * 100) + '%'; timeEl.textContent = fmt(t) + ' / ' + fmt(TOTAL); }
+
+  // ====== reproducción ======
+  var cur = 0, playing = false, last = 0, loop = false;
+  var playBtn = document.getElementById('play'), pauseBtn = document.getElementById('pause'), loopBtn = document.getElementById('loop'), hint = document.getElementById('hint');
+  function syncButtons() { playBtn.classList.toggle('is-on', playing); pauseBtn.classList.toggle('is-on', !playing); }
+  function play() { if (!gateReady || playing) return; if (cur >= TOTAL) cur = 0; playing = true; last = performance.now(); hint.classList.add('hide'); syncButtons(); requestAnimationFrame(frame); }
+  function pause() { playing = false; syncButtons(); }
+  function toggle() { if (playing) pause(); else play(); }
+  function seek(t) { cur = clamp(t, 0, TOTAL); render(cur); }
+  function frame(now) { if (!playing) return; var dt = (now - last) / 1000; last = now; cur += dt; if (cur >= TOTAL) { if (loop) cur -= TOTAL; else { cur = TOTAL; render(cur); pause(); return; } } render(cur); requestAnimationFrame(frame); }
+  playBtn.addEventListener('click', play);
+  pauseBtn.addEventListener('click', pause);
+  loopBtn.addEventListener('click', function () { loop = !loop; loopBtn.classList.toggle('loop-on', loop); loopBtn.classList.toggle('loop-off', !loop); loopBtn.setAttribute('aria-pressed', loop ? 'true' : 'false'); });
+
+  var tl = document.getElementById('timeline');
+  function seekFromEvent(e) { var r = tl.getBoundingClientRect(), cx = e.clientX != null ? e.clientX : (e.touches && e.touches[0].clientX) || 0; seek(clamp((cx - r.left) / r.width, 0, 1) * TOTAL); }
+  var scrubbing = false;
+  tl.addEventListener('pointerdown', function (e) { scrubbing = true; try { tl.setPointerCapture(e.pointerId); } catch (x) {} seekFromEvent(e); });
+  tl.addEventListener('pointermove', function (e) { if (scrubbing) seekFromEvent(e); });
+  window.addEventListener('pointerup', function () { scrubbing = false; });
+
+  // ====== salto ±5s ======
+  var seekOv = document.getElementById('seek'), seekArrow = seekOv.querySelector('.seek-arrow'), seekNum = seekOv.querySelector('.seek-num');
+  var accum = 0, accumDir = 0, accumTimer = null;
+  function doSeek(dir) {
+    seek(cur + dir * 5);
+    if (accumDir !== dir) { accum = 0; accumDir = dir; }
+    accum += 5; seekArrow.textContent = dir > 0 ? '⏩' : '⏪'; seekNum.textContent = accum + 's';
+    seekOv.classList.remove('hide'); clearTimeout(accumTimer);
+    accumTimer = setTimeout(function () { seekOv.classList.add('hide'); accum = 0; accumDir = 0; }, 200);
+  }
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space') { e.preventDefault(); toggle(); }
+    else if (e.code === 'ArrowRight') { e.preventDefault(); doSeek(1); }
+    else if (e.code === 'ArrowLeft') { e.preventDefault(); doSeek(-1); }
+  });
+  window.addEventListener('resize', function () { sizeCanvas(); render(cur); });
+  window.addEventListener('load', function () { sizeCanvas(); iframes.forEach(measure); render(cur); });
+
+  // Estado inicial: cargando (play deshabilitado hasta precargar las páginas).
+  hint.innerHTML = 'Cargando el recorrido…';
+  playBtn.classList.add('is-loading');
+
+  // Hook para un grabador determinista externo (frame a frame, sin tirones).
+  window.ANIM = {
+    seek: function (t) { seek(t); },
+    total: function () { return TOTAL; },
+    ready: function () { return gateReady; }
+  };
+
+  sizeCanvas(); syncButtons(); render(0);
+})();

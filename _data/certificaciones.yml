@@ -1,0 +1,134 @@
+
+obtenidas:
+  - nombre: "CKA"
+    color: "94 180 248"
+    estado_label: "Obtenida"
+    emisor: "The Linux Foundation / CNCF"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Certificación obtenida en administración de Kubernetes.
+    habilidades: []
+
+  - nombre: "CKAD"
+    color: "94 180 248"
+    estado_label: "Obtenida"
+    emisor: "The Linux Foundation / CNCF"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Certificación obtenida en desarrollo de aplicaciones para Kubernetes.
+    habilidades: []
+
+  - nombre: "CKS"
+    color: "94 180 248"
+    estado_label: "Obtenida"
+    emisor: "The Linux Foundation / CNCF"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Certificación obtenida en seguridad de Kubernetes.
+    habilidades: []
+
+  - nombre: "CEH"
+    color: "130 140 255"
+    estado_label: "Obtenida"
+    emisor: "EC-Council"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Certificación obtenida en hacking ético.
+    habilidades: []
+
+  - nombre: "CPENT"
+    color: "130 140 255"
+    estado_label: "Obtenida"
+    emisor: "EC-Council"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Certificación obtenida en pruebas de penetración.
+    habilidades: []
+
+  - nombre: "CND"
+    color: "130 140 255"
+    estado_label: "Obtenida"
+    emisor: "EC-Council"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Certificación obtenida en defensa de redes.
+    habilidades: []
+
+  - nombre: "LPT Master"
+    color: "130 140 255"
+    estado_label: "Obtenida"
+    emisor: "EC-Council"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Certificación obtenida en pruebas de penetración avanzadas.
+    habilidades: []
+
+en_progreso:
+  - nombre: "CCT"
+    color: "94 180 248"
+    estado_label: "En preparación"
+    emisor: "EC-Council"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Preparación para el examen de certificación.
+    habilidades: []
+
+  - nombre: "eWPTX"
+    color: "130 140 255"
+    estado_label: "En preparación"
+    emisor: "INE Security"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Preparación en pruebas de penetración web avanzadas.
+    habilidades: []
+
+  - nombre: "eWPT"
+    color: "130 140 255"
+    estado_label: "En preparación"
+    emisor: "INE Security"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Preparación en pruebas de penetración de aplicaciones web.
+    habilidades: []
+
+  - nombre: "CHFI"
+    color: "130 140 255"
+    estado_label: "En preparación"
+    emisor: "EC-Council"
+    logo: ""
+    fecha: ""
+    documento: ""
+    preview: ""
+    resumen: >-
+      Preparación en investigación forense digital.
+    habilidades: []

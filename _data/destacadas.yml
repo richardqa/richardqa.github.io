@@ -1,0 +1,24 @@
+
+# Elementos destacados de NubeSegura
+
+certificaciones:
+  - nombre: "CKA"
+    img: "/assets/img/logos/cka.png"
+    color: "94 180 248"
+    url: "/certificaciones/"
+
+  - nombre: "CKS"
+    img: "/assets/img/logos/cks.png"
+    color: "46 230 214"
+    url: "/certificaciones/"
+
+  - nombre: "CPENT"
+    img: "/assets/img/logos/cpent.png"
+    color: "130 140 255"
+    url: "/certificaciones/"
+
+maquinas:
+  - {}
+  - {}
+  - {}
+

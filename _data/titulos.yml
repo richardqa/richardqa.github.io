@@ -1,0 +1,71 @@
+oficiales:
+  - nombre: "Máster en Ciberseguridad"
+    color: "220 48 73"
+    estado_label: "Oficial"
+    emisor: "IMF · Título propio UCAV"
+    logo: "/assets/img/logos/imf.png"
+    fecha: "2025 – 2026"
+    documento: "/assets/docs/master-ciberseguridad.pdf"
+    preview: "/assets/img/docs-preview/master-ciberseguridad.png"
+    tfm: "/assets/docs/JaimeHereza_TFM.pdf"
+    # El write-up del TFM (Dolibarr) está oculto; al reactivarlo, descomentar.
+    # tfm_writeup: "/posts/dolibarr/"
+    resumen: >-
+      Un máster muy completo (60 ECTS, 1.500 h) que toca casi todas las ramas de la
+      ciberseguridad. Me ha servido para construir una base sólida antes de centrarme en lo
+      ofensivo, mezclando la teoría con mucha parte práctica.
+    habilidades: ["Hacking ético", "Hacking móvil", "Análisis forense", "Ciberinteligencia", "SIEM", "Fundamentos"]
+
+  - nombre: "Iniciación a Python"
+    color: "77 166 255"
+    estado_label: "Oficial"
+    emisor: "IMF Business School"
+    logo: "/assets/img/logos/imf.png"
+    fecha: "2026"
+    documento: "/assets/docs/python.pdf"
+    preview: "/assets/img/docs-preview/python.png"
+    resumen: >-
+      Python es mi navaja suiza para automatizar cosas y montar herramientas rápidas. Repasé
+      desde lo básico del lenguaje hasta scripting más aplicado, que es justo lo que acabo
+      usando para las utilidades que subo al blog.
+    habilidades: ["Sintaxis", "Estructuras de datos", "Scripting", "Automatización", "Ficheros", "POO"]
+
+no_oficiales:
+  - nombre: "Personalización de entorno en Linux"
+    color: "255 62 62"
+    estado_label: "Curso"
+    emisor: "Hack4u · s4vitar"
+    logo: "/assets/img/logos/hack4u.jpeg"
+    fecha: "Octubre 2025"
+    documento: "/assets/docs/s4vitar-personalizacion-entorno.jpg"
+    preview: "/assets/docs/s4vitar-personalizacion-entorno.jpg"
+    resumen: >-
+      Curso de s4vitar para dejar un Linux personalizado desde cero y convertirlo en un
+      entorno de trabajo profesional: terminal, multiplexores, atajos y todo lo que hace que
+      trabajar en una máquina sea rápido y cómodo.
+    habilidades: ["Zsh", "Tmux", "Vim", "Dotfiles", "Terminal", "Productividad"]
+
+  - nombre: "Introducción a Linux"
+    color: "255 62 62"
+    estado_label: "Curso"
+    emisor: "Hack4u · s4vitar"
+    logo: "/assets/img/logos/hack4u.jpeg"
+    fecha: "2025"
+    documento: "/assets/docs/s4vitar-introduccion-linux.jpg"
+    preview: "/assets/docs/s4vitar-introduccion-linux.jpg"
+    resumen: >-
+      Las bases de Linux que todo el que quiera dedicarse a esto necesita tener bien
+      asentadas: sistema de archivos, permisos, procesos y manejo de la terminal. El punto de
+      partida de todo lo demás.
+    habilidades: ["Sistema de archivos", "Permisos", "Procesos", "Bash", "Usuarios", "Red"]
+
+en_progreso:
+  - nombre: "Preparatoria para OSCP"
+    color: "120 200 160"
+    estado_label: "En curso"
+    emisor: "Securo"
+    logo: "/assets/img/logos/securo.jpeg"
+    resumen: >-
+      Formación de Securo centrada en llegar a la OSCP con una metodología clara, repasando
+      las técnicas y el tipo de máquinas que me voy a encontrar en el examen.
+    habilidades: ["Metodología", "Enumeración", "Explotación", "Escalada", "Active Directory", "Reporting"]
